@@ -1,0 +1,43 @@
+<p>FOAF profile: <input ng-model="profileUri" size="100"/></p>
+
+<div class="profile">
+    <div style="float:left;" ng-if="profile.img">
+        <img ng-src="{{profile.img}}" width="100" length="100"/>
+    </div>
+    <span ng-if="profile.name">{{profile.name}}<br/></span>
+    <span ng-if="profile.givenName">{{profile.givenName}}<br/></span>
+    <span ng-if="profile.familyName">{{profile.familyName}}<br/></span>
+    <span ng-if="profile.nick">{{profile.nick}}<br/></span>
+    <span ng-if="profile.mbox">{{profile.mbox}}<br/><br/></span>
+</div>
+
+<br/>
+
+<div style="float:left; border:solid;" class="profileRelationship" ng-repeat="relationship in relationships">
+    <div style="float:left;" ng-if="relationship.img">
+        <a ng-click="changeProfileUri(relationship.uri)">
+            <img ng-src="{{relationship.img}}" width="100u" length="100"/>
+        </a>
+    </div>
+    <span ng-if="relationship.name" >
+                <a ng-click="changeProfileUri(relationship.uri)" ng-if="relationship.name" >
+                    {{relationship.name}}
+                    <a/>
+                    <br/>
+    </span>
+    <span ng-if="relationship.givenName">{{relationship.givenName}}<br/></span>
+    <span ng-if="relationship.familyName">{{relationship.familyName}}<br/></span>
+    <span ng-if="relationship.nick">{{relationship.nick}}<br/></span>
+    <span ng-if="relationship.mbox">{{relationship.mbox}}<br/></span>
+</div>
+
+
+<div style="clear:both;">
+    <br/>
+    <br/>
+    <br/>
+    <h2>Error log:</h2>
+    <div ng-repeat="log in errorLogs">
+        {{log}}<br/>
+    </div>
+</div>
