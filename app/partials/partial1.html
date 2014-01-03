@@ -1,37 +1,17 @@
-<p>FOAF profile: <input ng-model="profileUri" size="100"/></p>
+<p>FOAF profile: <input ng-model="currentProfileUri" size="100"/></p>
 
-<div class="profile">
-    <div style="float:left;" ng-if="profile.img">
-        <img ng-src="{{profile.img}}" width="100" length="100"/>
-    </div>
-    <span ng-if="profile.name">{{profile.name}}<br/></span>
-    <span ng-if="profile.givenName">{{profile.givenName}}<br/></span>
-    <span ng-if="profile.familyName">{{profile.familyName}}<br/></span>
-    <span ng-if="profile.nick">{{profile.nick}}<br/></span>
-    <span ng-if="profile.mbox">{{profile.mbox}}<br/><br/></span>
-</div>
+
+<foaf-person person-model="person" on-person-click="changeCurrentProfileUri(person.uri)"></foaf-person>
 
 <br/>
 
-<div style="float:left; border:solid;" class="profileRelationship" ng-repeat="relationship in relationships">
-    <div style="float:left;" ng-if="relationship.img">
-        <a ng-click="changeProfileUri(relationship.uri)">
-            <img ng-src="{{relationship.img}}" width="100u" length="100"/>
-        </a>
+<div style="clear:both;">
+    <div style="float:left; border:solid;" class="profileRelationship" ng-repeat="relationship in relationships">
+        <foaf-person person-model="relationship" on-person-click="changeCurrentProfileUri(relationship.uri)"></foaf-person>
     </div>
-    <span ng-if="relationship.name" >
-                <a ng-click="changeProfileUri(relationship.uri)" ng-if="relationship.name" >
-                    {{relationship.name}}
-                    <a/>
-                    <br/>
-    </span>
-    <span ng-if="relationship.givenName">{{relationship.givenName}}<br/></span>
-    <span ng-if="relationship.familyName">{{relationship.familyName}}<br/></span>
-    <span ng-if="relationship.nick">{{relationship.nick}}<br/></span>
-    <span ng-if="relationship.mbox">{{relationship.mbox}}<br/></span>
 </div>
 
-
+<!--
 <div style="clear:both;">
     <br/>
     <br/>
@@ -39,5 +19,27 @@
     <h2>Error log:</h2>
     <div ng-repeat="log in errorLogs">
         {{log}}<br/>
+    </div>
+</div>
+-->
+
+
+<div style="clear:both;">
+    <h2>Mode edition:</h2>
+    <div style="clear:both;">
+        Name: <input ng-model="personPG" rdf-predicate-binding="foaf:name"></input><br/>
+        Given name: <input ng-model="personPG" rdf-predicate-binding="foaf:givenName"></input><br/>
+        Family name: <input ng-model="personPG" rdf-predicate-binding="foaf:familyName"></input><br/>
+        Img: <input ng-model="personPG" rdf-predicate-binding="foaf:img"></input><br/>
+        Nick: <input ng-model="personPG" rdf-predicate-binding="foaf:nick"></input><br/>
+        Mbox: <input ng-model="personPG" rdf-predicate-binding="foaf:mbox"></input><br/>
+        Homepage: <input ng-model="personPG" rdf-predicate-binding="foaf:homepage"></input><br/>
+    </div>
+</div>
+
+<div style="clear:both;">
+    <h2>Turtle output:</h2>
+    <div style="clear:both;">
+        {{personPG.graph.toNT()}}
     </div>
 </div>

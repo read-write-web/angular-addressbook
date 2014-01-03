@@ -5,31 +5,40 @@
 angular.module('myApp.controllers', [])
 
 
-  .controller('MyCtrl1', ['$scope', 'RdfStore','RdfHttpService',function($scope,RdfStore,RdfHttpService) {
+  .controller('MyCtrl1', ['$scope', 'RdfStore','RdfHttpService','RdfGraphService',function($scope,RdfStore,RdfHttpService,RdfGraphService) {
 
-
-    $scope.$watch('profileUri', function() {
-      $scope.errorLogs.length = 0;
-      loadFullProfile($scope.profileUri);
-    })
 
     $scope.errorLogs = [];
-    $scope.profileUri = 'https://my-profile.eu/people/deiu/card#me';
+    $scope.currentProfileUri = 'https://my-profile.eu/people/deiu/card#me';
 
+    $scope.$watch('currentProfileUri', function() {
+      console.debug("Change current profile uri called with " + $scope.currentProfileUri);
+      $scope.errorLogs.length = 0;
+      loadFullProfile($scope.currentProfileUri);
+    })
 
-    $scope.changeProfileUri = function(newUri) {
-      $scope.profileUri = newUri;
+    $scope.changeCurrentProfileUri = function changeCurrentProfileUri(uri) {
+      $scope.currentProfileUri = uri;
     }
 
 
-    function loadFullProfile(uriWithFragment) {
-      console.info("will render profile: " + uriWithFragment)
-      $scope.profile = undefined;
+    function loadFullProfile(subject) {
+      console.info("will render profile: " + subject)
+      $scope.person = undefined;
       $scope.relationships = [];
-      RdfHttpService.fetchPointedGraph(uriWithFragment).then(function(profileGraph) {
-        $scope.profile = toProfileModel(profileGraph,uriWithFragment);
-        getRelationshipGraphs(profileGraph,function(relationshipProfileGraph,uri) {
-          $scope.relationships.push( toProfileModel(relationshipProfileGraph,uri) );
+      $scope.relationshipsPG = [];
+      RdfHttpService.fetchPointedGraph(subject).then(function(profileGraph) {
+        $scope.person = toProfileModel(profileGraph,subject);
+        $scope.personPG = {
+          graph: profileGraph,
+          pointer: subject
+        }
+        getRelationshipGraphs(profileGraph,subject,function onRelationshipFound(relationshipProfileGraph,relationshipSubject) {
+          $scope.relationships.push( toProfileModel(relationshipProfileGraph,relationshipSubject) );
+          $scope.relationshipsPG.push({
+            graph: relationshipProfileGraph,
+            pointer: relationshipSubject
+          });
         });
       },function(error) {
         $scope.errorLogs.push("Can't retrieve full profile at "+uri+" because of: "+error);
@@ -37,9 +46,8 @@ angular.module('myApp.controllers', [])
     }
 
 
-
-    function getRelationshipGraphs(profileGraph, onRelationshipFound) {
-      var uris = findAll(profileGraph,'foaf:knows')
+    function getRelationshipGraphs(profileGraph,subject,onRelationshipFound) {
+      var uris = RdfGraphService.findAllObjects(profileGraph,subject,'foaf:knows')
       console.debug("Relationships are: " + uris);
       _.forEach(uris, function(uri) {
         RdfHttpService.fetchPointedGraph(uri).then(function(profileGraph) {
@@ -56,35 +64,16 @@ angular.module('myApp.controllers', [])
 
 
 
-
-    function findAll(graph,predicate) {
-      var predicateNode = RdfStore.rdf.createNamedNode(RdfStore.rdf.resolve(predicate));
-      var triples = graph.match(null,predicateNode, null).toArray();
-      return _.map(triples, function(t){ return t.object.valueOf() });
-    }
-
-    function findFirst(graph,predicate) {
-      return getFirstOrUndefined(findAll(graph,predicate));
-    }
-
-    function getFirstOrUndefined(array) {
-      if ( array.length > 0 ) {
-        return array[0];
-      } else {
-        return undefined;
-      }
-    }
-
-    function toProfileModel(graph,uri) {
-      var name = findFirst(graph,"foaf:name");
-      var givenName = findFirst(graph,"foaf:givenName");
-      var familyName = findFirst(graph,"foaf:familyName");
-      var img = findFirst(graph,"foaf:img");
-      var nick = findFirst(graph,"foaf:nick");
-      var mbox = findFirst(graph,"foaf:mbox");
-      var homepage = findFirst(graph,"foaf:homepage");
+    function toProfileModel(graph,subject) {
+      var name = RdfGraphService.findFirstObject(graph,subject,"foaf:name");
+      var givenName = RdfGraphService.findFirstObject(graph,subject,"foaf:givenName");
+      var familyName = RdfGraphService.findFirstObject(graph,subject,"foaf:familyName");
+      var img = RdfGraphService.findFirstObject(graph,subject,"foaf:img");
+      var nick = RdfGraphService.findFirstObject(graph,subject,"foaf:nick");
+      var mbox = RdfGraphService.findFirstObject(graph,subject,"foaf:mbox");
+      var homepage = RdfGraphService.findFirstObject(graph,subject,"foaf:homepage");
       return {
-        uri: uri,
+        uri: subject,
         name: name,
         givenName: givenName,
         familyName: familyName,

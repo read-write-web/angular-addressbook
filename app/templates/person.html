@@ -1,0 +1,20 @@
+
+<div class="foafPerson">
+
+    <div style="float:left;" ng-if="personModel.img">
+        <a href="" ng-click="onPersonClick()">
+            <img ng-src="{{personModel.img}}" width="100" length="100"/>
+        </a>
+    </div>
+    <span ng-if="personModel.name">
+                <a href="" ng-click="onPersonClick()" ng-if="personModel.name" >
+                    {{personModel.name}}
+                    <a/>
+    </span>
+
+    <span ng-if="personModel.givenName">{{personModel.givenName}}<br/></span>
+    <span ng-if="personModel.familyName">{{personModel.familyName}}<br/></span>
+    <span ng-if="personModel.nick">{{personModel.nick}}<br/></span>
+    <span ng-if="personModel.mbox">{{personModel.mbox}}<br/></span>
+
+</div>

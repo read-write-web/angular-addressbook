@@ -15,15 +15,53 @@ angular.module('myApp.services', [])
     rdfstore.create
   )
 
+  .service('RdfGraphService',['RdfStore',function(RdfStore) {
+
+    var self = this;
+
+    this.createOrReplaceObject = function createOrReplaceObject(graph,subject,predicate,newObjectValue) {
+      var subjectNode = RdfStore.rdf.createNamedNode(subject);
+      var predicateNode = RdfStore.rdf.createNamedNode(RdfStore.rdf.resolve(predicate));
+      var newObjectLiteral = RdfStore.rdf.createLiteral(newObjectValue);
+      console.log("subject node: " + subjectNode);
+      console.log("predicate node: " + predicateNode);
+      console.log("literal node: " + newObjectLiteral);
+      graph.removeMatches(subjectNode,predicateNode,null);
+      graph.add(RdfStore.rdf.createTriple(subjectNode,predicateNode,newObjectLiteral));
+      return graph;
+    }
+
+    this.findAllObjects = function findAllObjects(graph,subject,predicate) {
+      var subjectNode = RdfStore.rdf.createNamedNode(subject);
+      var predicateNode = RdfStore.rdf.createNamedNode(RdfStore.rdf.resolve(predicate));
+      var triples = graph.match(subjectNode,predicateNode, null).toArray();
+      return _.map(triples, function(t){ return t.object.valueOf() });
+    }
+
+    this.findFirstObject = function findFirstObject(graph,subject,predicate) {
+      return getFirstOrUndefined(self.findAllObjects(graph,subject,predicate));
+    }
+
+    function getFirstOrUndefined(array) {
+      if ( array.length > 0 ) {
+        return array[0];
+      } else {
+        return undefined;
+      }
+    }
+
+
+  }])
+
+
+
   .service('RdfHttpService',['$http','$q','RdfStore',function($http,$q,RdfStore) {
 
-    // TODO, for now we only accept turtle, no content negociation
-    var todoOnlyMimeType = 'text/turtle'
 
     var config =
     {
       headers:  {
-        'Accept': todoOnlyMimeType
+        'Accept': 'text/turtle' // TODO, and take care, rdfstore doesn't support natively rdf+xml
       }
     };
 
@@ -75,6 +113,7 @@ angular.module('myApp.services', [])
       return deferred.promise;
     }
 
+    // TODO bad: this remove other predicates of the graph
     function pointed(graph,subject) {
       var subjectNode = RdfStore.rdf.createNamedNode(subject);
       return graph.match(subjectNode,null,null);
