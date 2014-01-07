@@ -138,13 +138,27 @@ angular.module('myApp.services', [])
 
 
 
-  .service('RdfHttpService',['$http','$q','RdfStore','CORS_PROXY_CFG',function($http,$q,RdfStore,CORS_PROXY_CFG) {
+  .service('RdfHttpService',['$http','$q','RdfStore','CORS_PROXY_CFG','$angularCacheFactory',function($http,$q,RdfStore,CORS_PROXY_CFG,$angularCacheFactory) {
+
+    // TODO externalize this cache config
+    // see documentation here: http://jmdobry.github.io/angular-cache/
+    var httpCache = $angularCacheFactory("httpCache", {
+      maxAge: 120000,
+      cacheFlushInterval: 60000,
+      deleteOnExpire: 'aggressive',
+      storageMode: 'localStorage',
+      onExpire: function (key, value) {
+        console.info("Expired from http cache: " + key);
+      }
+    });
 
     var config =
     {
       headers:  {
         'Accept': 'text/turtle' // TODO, and take care, rdfstore doesn't support natively rdf+xml
-      }
+      },
+      timeout: 5000,
+      cache: httpCache
     };
 
     var self = this;

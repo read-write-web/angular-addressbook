@@ -5,6 +5,7 @@
 angular.module('myApp', [
     'ngRoute',
     'ngSanitize',
+    'jmdobry.angular-cache',
     'myApp.configuration',
     'myApp.filters',
     'myApp.services',
