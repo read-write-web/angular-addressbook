@@ -151,14 +151,15 @@ angular.module('myApp.services', [])
         console.info("Expired from http cache: " + key);
       }
     });
+    console.error("httpCache : " + httpCache);
 
     var config =
     {
       headers:  {
         'Accept': 'text/turtle' // TODO, and take care, rdfstore doesn't support natively rdf+xml
       },
-      timeout: 5000,
-      cache: httpCache
+      timeout: 10000
+      // cache: httpCache // TODO make caching work fine!
     };
 
     var self = this;
@@ -194,7 +195,6 @@ angular.module('myApp.services', [])
       var deferred = $q.defer();
       RdfStore.graph(graphUri,function(success,graph){
         if ( success ) {
-          console.debug("Graph loaded for uri " + graphUri + " with " + graph.toArray().length + " triples");
           deferred.resolve(graph);
         } else {
           deferred.reject("Can't GET graph with GraphURI="+graphUri);

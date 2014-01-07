@@ -1,0 +1,31 @@
+<div id="search">
+    <div id="add">+</div>
+    <input type="text" placeholder="Search your contacts" ng-model="searchContactText"/>
+    <button type="submit" class="fontawesome-ok"></button>
+</div>
+<div id="actionNeeded">Action needed</div>
+<div class="contacts clearfix">
+    <ul class="clearfix">
+
+        <li class="contact clearfix" ng-repeat="relationshipPg in relationshipPgs | filter:searchContactText">
+            <div class="cssLoader loader style-3"></div>
+            <div class="picture">
+                <a href="" ng-click="changeCurrentProfileUri(relationshipPg.subject)">
+                    <img ng-src="{{ (relationshipPg | predicate:'foaf:img') || (relationshipPg | predicate:'foaf:depiction') }}" src="img/avatar.png" alt="Picture for {{relationshipPg.subject}}"/>
+                </a>
+            </div>
+            <div class="name">{{ (relationshipPg | predicate:'foaf:name') || (relationshipPg | predicate:'foaf:nick') || (relationshipPg | predicate:'foaf:givenName')  }}</div>
+            <div class="surname">{{relationshipPg | predicate:'foaf:nick'}}</div>
+            <div class="company">{{(relationshipPg | predicate:'foaf:workplaceHomepage') || 'NoCompany'}}</div>
+            <div class="newMessages">3</div>
+            <div class="recentInteractions">10</div>
+            <div class="updates">4</div>
+            <div class="moreInfo">
+                <div class="lastInteraction">Last message from Edward: <span>three days ago</span></div>
+                <div class="message">Hey, how was the play? I hope you enjoyed it. Let's talk about it this week...</div>
+                <div class="nextStep"><a href="#">Write back</a></div>
+            </div>
+        </li>
+
+    </ul>
+</div>

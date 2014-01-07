@@ -5,6 +5,7 @@
 angular.module('myApp', [
     'ngRoute',
     'ngSanitize',
+    'pasvaz.bindonce',
     'jmdobry.angular-cache',
     'myApp.configuration',
     'myApp.filters',
@@ -14,7 +15,7 @@ angular.module('myApp', [
   ])
   .config(['$routeProvider', function($routeProvider) {
     $routeProvider.when('/personProfile', {templateUrl: 'partials/personProfile.html', controller: 'PersonProfileCtrl'});
-    $routeProvider.when('/view2', {templateUrl: 'partials/partial2.html', controller: 'MyCtrl2'});
-    $routeProvider.otherwise({redirectTo: '/personProfile'});
+    $routeProvider.when('/testPartial', {templateUrl: 'partials/testPartial.html', controller: 'PersonProfileCtrl'});
+    $routeProvider.otherwise({redirectTo: '/testPartial'});
   }])
 ;
