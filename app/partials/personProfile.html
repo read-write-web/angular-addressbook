@@ -1,0 +1,69 @@
+
+<div style="clear:both;">
+    <h2>User profile:</h2>
+    <div>URL: <input ng-model="currentProfileUri" size="100"/></div><br/>
+    <div style="clear:both;">
+        <foaf-person person-model="person" person-pg="personPg" on-person-click="changeCurrentProfileUri(personPg.subject)"></foaf-person>
+    </div>
+</div>
+
+<div style="clear:both;">
+    <br/>
+    <h2>Friends
+        <b><a href="">
+            <span ng-init="showFriends = true" ng-click="showFriends = !showFriends">
+                <span ng-hide="showFriends">+</span>
+                <span ng-show="showFriends">-</span>
+            </span>
+        </a>
+        </b>
+    </h2>
+    <div style="clear:both;" ng-show="showFriends">
+        <div style="float:left; border:solid;" class="profileRelationship" ng-repeat="relationshipPg in relationshipPgs">
+            <foaf-person person-pg="relationshipPg" on-person-click="changeCurrentProfileUri(relationshipPg.subject)"></foaf-person>
+        </div>
+    </div>
+</div>
+
+
+<div style="clear:both;">
+    <br/>
+    <h2>Edit
+        <b><a href="">
+            <span ng-click="showEdit = !showEdit">
+                <span ng-hide="showEdit">+</span>
+                <span ng-show="showEdit">-</span>
+            </span>
+        </a>
+        </b>
+    </h2>
+    <div style="clear:both;" ng-show="showEdit">
+        Name: <input ng-model="personPg" rdf-predicate-binding="foaf:name"></input><br/>
+        Given name: <input ng-model="personPg" rdf-predicate-binding="foaf:givenName"></input><br/>
+        Family name: <input ng-model="personPg" rdf-predicate-binding="foaf:familyName"></input><br/>
+        Img: <input ng-model="personPg" rdf-predicate-binding="foaf:img"></input><br/>
+        Depiction: <input ng-model="personPg" rdf-predicate-binding="foaf:depiction"></input><br/>
+        Nick: <input ng-model="personPg" rdf-predicate-binding="foaf:nick"></input><br/>
+        Mbox: <input ng-model="personPg" rdf-predicate-binding="foaf:mbox"></input><br/>
+        Homepage: <input ng-model="personPg" rdf-predicate-binding="foaf:homepage"></input><br/>
+    </div>
+</div>
+
+
+<div style="clear:both;">
+    <br/>
+    <h2>Turtle
+        <b><a href="">
+            <span ng-click="showTurtle = !showTurtle">
+                <span ng-hide="showTurtle">+</span>
+                <span ng-show="showTurtle">-</span>
+            </span>
+        </a>
+        </b>
+    </h2>
+    <div style="clear:both;" ng-show="showTurtle">
+           <span ng-repeat="turtleLine in personPg.graph.toNT() | splitNewLines">
+              {{turtleLine}}<br/>
+            </span>
+    </div>
+</div>

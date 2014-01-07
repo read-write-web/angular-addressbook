@@ -3,16 +3,27 @@
 /* Filters */
 
 angular.module('myApp.filters', [])
-  .filter('interpolate', ['version', function(version) {
-    return function(text) {
-      return String(text).replace(/\%VERSION\%/mg, version);
-    }
+
+  .filter('predicate', ['RdfPointedGraphService',function(RdfPointedGraphService) {
+    return function predicate(pointedGraph,predicate) {
+      if ( pointedGraph ) {
+        return RdfPointedGraphService.findFirstObject(pointedGraph,predicate);
+      }
+    };
   }])
 
-  .filter('newlines', function(){
+  .filter('splitNewLines', function () {
     return function(text) {
-      return text.replace(/\n/g, '<br/>');
+      if ( text ) {
+        return text.split(/\n/g);
+      }
     }
-  });
+  })
+
+  .filter('unsafe', ['$sce',function($sce) {
+    return function(val) {
+      return $sce.trustAsHtml(val);
+    };
+  }])
 
 ;

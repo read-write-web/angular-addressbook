@@ -17,14 +17,14 @@ angular.module('myApp.directives', [])
       restrict: 'E',
       templateUrl: 'templates/person.html',
       scope: {
-        personModel: '=',
+        personPg: '=',
         onPersonClick: '&'
       }
     };
   })
 
 
-  .directive('rdfPredicateBinding',['RdfGraphService',function(RdfGraphService) {
+  .directive('rdfPredicateBinding',['RdfPointedGraphService',function(RdfPointedGraphService) {
     return {
       restrict: 'A',
       require: 'ngModel',
@@ -37,18 +37,14 @@ angular.module('myApp.directives', [])
 
         ngModelCtrl.$formatters.push(function formatter(pointedGraph) {
           if (pointedGraph) {
-            var object = RdfGraphService.findFirstObject(pointedGraph.graph,pointedGraph.pointer,predicate);
+            var object = RdfPointedGraphService.findFirstObject(pointedGraph,predicate);
             return object;
           }
         });
 
         ngModelCtrl.$parsers.push(function parser(value) {
           var pg = scope.ngModel;
-          var newGraph = RdfGraphService.createOrReplaceObject(pg.graph,pg.pointer,predicate,value);
-          return {
-            graph: newGraph,
-            pointer: pg.pointer
-          }
+          return RdfPointedGraphService.createOrReplaceObject(pg,predicate,value);
         });
 
         // model -> view

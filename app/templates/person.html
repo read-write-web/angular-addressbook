@@ -1,20 +1,29 @@
 
 <div class="foafPerson">
 
-    <div style="float:left;" ng-if="personModel.img">
-        <a href="" ng-click="onPersonClick()">
-            <img ng-src="{{personModel.img}}" width="100" length="100"/>
-        </a>
+    <div ng-if="personPg | predicate:'foaf:img'" style="float:left;">
+        <a href="" ng-click="onPersonClick()"><img ng-src="{{personPg | predicate:'foaf:img'}}" width="100" length="100"/></a>
     </div>
-    <span ng-if="personModel.name">
-                <a href="" ng-click="onPersonClick()" ng-if="personModel.name" >
-                    {{personModel.name}}
-                    <a/>
-    </span>
-
-    <span ng-if="personModel.givenName">{{personModel.givenName}}<br/></span>
-    <span ng-if="personModel.familyName">{{personModel.familyName}}<br/></span>
-    <span ng-if="personModel.nick">{{personModel.nick}}<br/></span>
-    <span ng-if="personModel.mbox">{{personModel.mbox}}<br/></span>
+    <div ng-if="personPg | predicate:'foaf:depiction'" style="float:left;">
+        <a href="" ng-click="onPersonClick()"><img ng-src="{{personPg | predicate:'foaf:depiction'}}" width="100" length="100"/></a>
+    </div>
+    <div>
+        URL: <a href="" ng-click="onPersonClick()">{{personPg.subject}}<a/>
+    </div>
+    <div ng-if="personPg | predicate:'foaf:name'">
+        Name: {{personPg | predicate:'foaf:name'}}<a/>
+    </div>
+    <div ng-if="personPg | predicate:'foaf:givenName'">
+        Given name: {{personPg | predicate:'foaf:givenName'}}
+    </div>
+    <div ng-if="personPg | predicate:'foaf:familyName'">
+        Family name: {{personPg | predicate:'foaf:familyName'}}
+    </div>
+    <div ng-if="personPg | predicate:'foaf:nick'">
+        Nick: {{personPg | predicate:'foaf:nick'}}
+    </div>
+    <div ng-if="personPg | predicate:'foaf:mbox'">
+        Mbox: {{personPg | predicate:'foaf:mbox'}}
+    </div>
 
 </div>

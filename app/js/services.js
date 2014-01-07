@@ -15,6 +15,7 @@ angular.module('myApp.services', [])
     rdfstore.create
   )
 
+
   .service('RdfGraphService',['RdfStore',function(RdfStore) {
 
     var self = this;
@@ -23,9 +24,6 @@ angular.module('myApp.services', [])
       var subjectNode = RdfStore.rdf.createNamedNode(subject);
       var predicateNode = RdfStore.rdf.createNamedNode(RdfStore.rdf.resolve(predicate));
       var newObjectLiteral = RdfStore.rdf.createLiteral(newObjectValue);
-      console.log("subject node: " + subjectNode);
-      console.log("predicate node: " + predicateNode);
-      console.log("literal node: " + newObjectLiteral);
       graph.removeMatches(subjectNode,predicateNode,null);
       graph.add(RdfStore.rdf.createTriple(subjectNode,predicateNode,newObjectLiteral));
       return graph;
@@ -50,13 +48,97 @@ angular.module('myApp.services', [])
       }
     }
 
+  }])
+
+
+
+
+  .service('RdfPointedGraphService',['RdfGraphService','RdfHttpService',function(RdfGraphService,RdfHttpService) {
+
+    var self = this;
+
+    this.pointedGraph = function pointedGraph(graph,subject) {
+      return {
+        graph: graph,
+        subject: subject
+      }
+    }
+
+    this.createOrReplaceObject = function createOrReplaceObject(pointedGraph,predicate,newObjectValue) {
+      var newGraph = RdfGraphService.createOrReplaceObject(pointedGraph.graph,pointedGraph.subject,predicate,newObjectValue);
+      return self.pointedGraph( newGraph, pointedGraph.subject );
+    }
+
+    this.findAllObjects = function findAllObjects(pointedGraph,predicate) {
+      return RdfGraphService.findAllObjects(pointedGraph.graph,pointedGraph.subject,predicate);
+    }
+
+    this.findFirstObject = function findFirstObject(pointedGraph,predicate) {
+      return RdfGraphService.findFirstObject(pointedGraph.graph,pointedGraph.subject,predicate);
+    }
+
+
+    // permits to retrieve the pointed graphs for a given predicate of a given pointed graph
+    // ex: oneToManyFetch(personPg,'foaf:knows',callback); will call the callback with all the friends pointed graphs of the personPg
+    // TODO return a stream instead of calling a callback (use RxJS?)
+    this.oneToMany = function oneToMany(pointedGraph,predicate,onPointedGraphRetrieved) {
+      var objects = self.findAllObjects(pointedGraph,predicate);
+      // TODO handle that not all rels are uris, it can be blank nodes etc...
+      var uris = objects.filter(validUrl)
+      console.debug("Subject: "+pointedGraph.subject+" -> Relations for "+predicate+" uris are: " + JSON.stringify(uris));
+      _.forEach(uris, function(uri) {
+        self.fetch(uri).then(
+          function(relPg) {
+            onPointedGraphRetrieved(relPg);
+          },
+          function(reason) {
+            if (reason.status === 0) {
+              console.error('Request cancelled for URI: ' +uri);
+            }
+            else {
+              console.error("Can't retrieve relationship at "+uri+" because of: "+JSON.stringify(reason));
+            }
+          });
+      });
+    }
+
+    function validUrl(str) {
+      var pattern = new RegExp('^(https?:\\/\\/)?'+ // protocol
+        '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'+ // domain name
+        '((\\d{1,3}\\.){3}\\d{1,3}))'+ // OR ip (v4) address
+        '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*'+ // port and path
+        '(\\?[;&a-z\\d%_.~+=-]*)?'+ // query string
+        '(\\#[-a-z\\d_]*)?$','i'); // fragment locator
+      if(!pattern.test(str)) {
+        return false;
+      } else {
+        return true;
+      }
+    }
+
+    this.fetch = function(uriWithFragment) {
+      var fragmentlessUri = removeFragment(uriWithFragment);
+      console.debug("Will fetch uri "+fragmentlessUri)
+      return RdfHttpService.fetchGraph(fragmentlessUri)
+        .then(function(graph) {
+          return self.pointedGraph( graph, uriWithFragment );
+        });
+    };
+
+    function removeFragment(uri) {
+      var index = uri.indexOf('#');
+      if (index > 0) {
+        return uri.substring(0, index);
+      } else {
+        return uri;
+      }
+    }
 
   }])
 
 
 
-  .service('RdfHttpService',['$http','$q','RdfStore',function($http,$q,RdfStore) {
-
+  .service('RdfHttpService',['$http','$q','RdfStore','CORS_PROXY_CFG',function($http,$q,RdfStore,CORS_PROXY_CFG) {
 
     var config =
     {
@@ -67,24 +149,17 @@ angular.module('myApp.services', [])
 
     var self = this;
 
-    this.fetchPointedGraph = function(uriWithFragment) {
-      var fragmentlessUri = removeFragment(uriWithFragment);
-      console.info("Will fetch profile "+fragmentlessUri)
-      return self.fetchGraph(fragmentlessUri)
-        .then(function(graph) {
-          return pointed(graph,uriWithFragment);
-        });
-    };
-
 
     this.fetchGraph = function fetchGraph(uri) {
-      return $http.get(uri,config)
+      var uriToFetch = maybeCorsProxifiedUri(uri);
+      return $http.get(uriToFetch,config)
         .then(function(response) {
-          var contentType = response.headers("Content-Type");
-          console.debug("It seems we got a response with mimeType "+contentType + " from "+ uri+" - will try to parse it as a graph");
-          return loadGraph(uri,response.data,contentType);
+          var mimeType = parseMimeType(response);
+          console.debug("It seems we got a response with mimeType "+mimeType + " from "+ uri+" - will try to parse it as a graph");
+          return loadGraph(uri,response.data,mimeType);
         })
         .then(function(triplesLoaded) {
+          console.debug("Number of triples loaded in store for " + uri + " = " + triplesLoaded);
           return getGraph(uri);
         });
     };
@@ -105,6 +180,7 @@ angular.module('myApp.services', [])
       var deferred = $q.defer();
       RdfStore.graph(graphUri,function(success,graph){
         if ( success ) {
+          console.debug("Graph loaded for uri " + graphUri + " with " + graph.toArray().length + " triples");
           deferred.resolve(graph);
         } else {
           deferred.reject("Can't GET graph with GraphURI="+graphUri);
@@ -113,22 +189,23 @@ angular.module('myApp.services', [])
       return deferred.promise;
     }
 
-    // TODO bad: this remove other predicates of the graph
-    function pointed(graph,subject) {
-      var subjectNode = RdfStore.rdf.createNamedNode(subject);
-      return graph.match(subjectNode,null,null);
+    // TODO this must be checked, but we need to be able to extract the mime type
+    // sometimes the charset is provided; like "Content-Type:text/turtle; charset=utf-8"
+    // and it breaks RDFStore
+    function parseMimeType(response) {
+      return response.headers("Content-Type").split(";")[0];
     }
 
-    function removeFragment(uri) {
-      var index = uri.indexOf('#');
-      if (index > 0) {
-        return uri.substring(0, index);
+    function maybeCorsProxifiedUri(uri) {
+      if ( CORS_PROXY_CFG.enabled ) {
+        return CORS_PROXY_CFG.corsProxifyUrl(uri);
       } else {
         return uri;
       }
     }
 
-
   }])
+
+
 
 ;
