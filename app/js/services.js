@@ -33,7 +33,11 @@ angular.module('myApp.services', [])
       var subjectNode = RdfStore.rdf.createNamedNode(subject);
       var predicateNode = RdfStore.rdf.createNamedNode(RdfStore.rdf.resolve(predicate));
       var triples = graph.match(subjectNode,predicateNode, null).toArray();
-      return _.map(triples, function(t){ return t.object.valueOf() });
+      var matches = _.map(triples, function(t){ return t.object.valueOf() });
+      if ( matches.length == 0 ) {
+        // console.warn("No object found for subject ["+subject+"] and predicate ["+predicate+"] in graph");
+      }
+      return matches;
     }
 
     this.findFirstObject = function findFirstObject(graph,subject,predicate) {
@@ -92,13 +96,39 @@ angular.module('myApp.services', [])
             onPointedGraphRetrieved(relPg);
           },
           function(reason) {
-            if (reason.status === 0) {
-              console.error('Request cancelled for URI: ' +uri);
+            if (reason.status) {
+              console.error("Request error with status code "+reason.status+" for URI:" +uri);
             }
             else {
               console.error("Can't retrieve relationship at "+uri+" because of: "+JSON.stringify(reason));
             }
           });
+      });
+    }
+
+    // TODO to remove is RDFStore still has concurrency problem...
+    this.oneToManySequential = function oneToMany(pointedGraph,predicate,onPointedGraphRetrieved) {
+      var objects = self.findAllObjects(pointedGraph,predicate);
+      // TODO handle that not all rels are uris, it can be blank nodes etc...
+      var uris = objects.filter(validUrl)
+      console.debug("Subject: "+pointedGraph.subject+" -> Relations for "+predicate+" uris are: " + JSON.stringify(uris));
+      var timeout = 0;
+      _.forEach(uris, function(uri) {
+        timeout += 1000;
+        setTimeout(function() {
+          self.fetch(uri).then(
+            function(relPg) {
+              onPointedGraphRetrieved(relPg);
+            },
+            function(reason) {
+              if (reason.status) {
+                console.error("Request error with status code "+reason.status+" for URI:" +uri);
+              }
+              else {
+                console.error("Can't retrieve relationship at "+uri+" because of: "+JSON.stringify(reason));
+              }
+            });
+        },timeout);
       });
     }
 
@@ -175,7 +205,7 @@ angular.module('myApp.services', [])
         })
         .then(function(triplesLoaded) {
           console.debug("Number of triples loaded in store for " + uri + " = " + triplesLoaded);
-          return getGraph(uri);
+          return getGraph(uri,triplesLoaded);
         });
     };
 
@@ -191,10 +221,13 @@ angular.module('myApp.services', [])
       return deferred.promise;
     }
 
-    function getGraph(graphUri) {
+    function getGraph(graphUri,expectedTriplesNumber) {
       var deferred = $q.defer();
       RdfStore.graph(graphUri,function(success,graph){
         if ( success ) {
+          if ( graph.toArray().length != expectedTriplesNumber) {
+            throw "Expected to find " + expectedTriplesNumber + " triples, but graph loaded has "+graph.toArray().length+" triples for uri "+graphUri+" ->\n" + graph.toNT();
+          }
           deferred.resolve(graph);
         } else {
           deferred.reject("Can't GET graph with GraphURI="+graphUri);

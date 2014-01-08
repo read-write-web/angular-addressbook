@@ -5,15 +5,15 @@
 angular.module('myApp.filters', [])
 
   .filter('predicate', ['RdfPointedGraphService',function(RdfPointedGraphService) {
-    return function predicate(pointedGraph,predicate) {
+    return function predicateFilter(pointedGraph,predicateVal) {
       if ( pointedGraph ) {
-        return RdfPointedGraphService.findFirstObject(pointedGraph,predicate);
+        return RdfPointedGraphService.findFirstObject(pointedGraph,predicateVal);
       }
     };
   }])
 
   .filter('splitNewLines', function () {
-    return function(text) {
+    return function splitNewLines(text) {
       if ( text ) {
         return text.split(/\n/g);
       }
@@ -21,7 +21,7 @@ angular.module('myApp.filters', [])
   })
 
   .filter('unsafe', ['$sce',function($sce) {
-    return function(val) {
+    return function unsafe(val) {
       return $sce.trustAsHtml(val);
     };
   }])

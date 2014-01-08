@@ -42,14 +42,14 @@ angular.module('myApp.controllers', [])
       RdfPointedGraphService.fetch(subject).then(
         function(personPg) {
           $scope.personPg = personPg
-          RdfPointedGraphService.oneToMany(personPg,'foaf:knows',function onRelationshipFound(relationshipPg) {
+          RdfPointedGraphService.oneToManySequential(personPg,'foaf:knows',function onRelationshipFound(relationshipPg) {
             relationshipsPgArray.push(relationshipPg);
           });
         },function(reason) {
-          if (reason.status === 0) {
-            console.error('Request cancelled for URI: ' +uri);
+          if (reason.status) {
+            console.error("Request error with status code "+reason.status+" for URI:" +subject);
           } else {
-            console.error("Can't retrieve full profile at "+uri+" because of: "+error);
+            console.error("Can't retrieve full profile at "+subject+" because of: "+JSON.stringify(reason));
           }
         });
     }
