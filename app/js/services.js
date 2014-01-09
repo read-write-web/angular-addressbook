@@ -11,27 +11,57 @@ angular.module('myApp.services', [])
     '0.1'
   )
 
-  .factory('RdfStore',
-    rdfstore.create
-  )
+  .provider('RdfEnv',function() {
+    this.$get = function($http) {
+      return rdfstore.create().rdf;
+    }
+  })
 
 
-  .service('RdfGraphService',['RdfStore',function(RdfStore) {
+
+
+  .service('RdfParser',['$q',function($q) {
+    // TODO see https://github.com/antoniogarrote/rdfstore-js/issues/70
+    // it seems we need to create a different rdfstore instance each time to avoid a concurrency issue :(
+
+    this.parseGraph = function parseGraph(graphUri, graphData, graphMimeType) {
+      var deferred = $q.defer();
+      var temporaryRdfStore = rdfstore.create();
+      temporaryRdfStore.load(graphMimeType, graphData, function(success, results) {
+        if ( success ) {
+          temporaryRdfStore.graph(function(success,graph){
+            if ( success ) {
+              deferred.resolve(graph);
+            } else {
+              deferred.reject("Can't GET graph with GraphURI="+graphUri);
+            }
+          });
+        } else {
+          deferred.reject("Can't LOAD graph with GraphURI="+graphUri+" and graphMimeType="+graphMimeType+" -> "+results);
+        }
+      });
+      return deferred.promise;
+    }
+  }])
+
+
+
+  .service('RdfGraphService',['RdfEnv',function(RdfEnv) {
 
     var self = this;
 
     this.createOrReplaceObject = function createOrReplaceObject(graph,subject,predicate,newObjectValue) {
-      var subjectNode = RdfStore.rdf.createNamedNode(subject);
-      var predicateNode = RdfStore.rdf.createNamedNode(RdfStore.rdf.resolve(predicate));
-      var newObjectLiteral = RdfStore.rdf.createLiteral(newObjectValue);
+      var subjectNode = RdfEnv.createNamedNode(subject);
+      var predicateNode = RdfEnv.createNamedNode(RdfEnv.resolve(predicate));
+      var newObjectLiteral = RdfEnv.createLiteral(newObjectValue);
       graph.removeMatches(subjectNode,predicateNode,null);
-      graph.add(RdfStore.rdf.createTriple(subjectNode,predicateNode,newObjectLiteral));
+      graph.add(RdfEnv.createTriple(subjectNode,predicateNode,newObjectLiteral));
       return graph;
     }
 
     this.findAllObjects = function findAllObjects(graph,subject,predicate) {
-      var subjectNode = RdfStore.rdf.createNamedNode(subject);
-      var predicateNode = RdfStore.rdf.createNamedNode(RdfStore.rdf.resolve(predicate));
+      var subjectNode = RdfEnv.createNamedNode(subject);
+      var predicateNode = RdfEnv.createNamedNode(RdfEnv.resolve(predicate));
       var triples = graph.match(subjectNode,predicateNode, null).toArray();
       var matches = _.map(triples, function(t){ return t.object.valueOf() });
       if ( matches.length == 0 ) {
@@ -96,7 +126,7 @@ angular.module('myApp.services', [])
             onPointedGraphRetrieved(relPg);
           },
           function(reason) {
-            if (reason.status) {
+            if (reason.status || reason.status == 0) {
               console.error("Request error with status code "+reason.status+" for URI:" +uri);
             }
             else {
@@ -106,31 +136,6 @@ angular.module('myApp.services', [])
       });
     }
 
-    // TODO to remove is RDFStore still has concurrency problem...
-    this.oneToManySequential = function oneToMany(pointedGraph,predicate,onPointedGraphRetrieved) {
-      var objects = self.findAllObjects(pointedGraph,predicate);
-      // TODO handle that not all rels are uris, it can be blank nodes etc...
-      var uris = objects.filter(validUrl)
-      console.debug("Subject: "+pointedGraph.subject+" -> Relations for "+predicate+" uris are: " + JSON.stringify(uris));
-      var timeout = 0;
-      _.forEach(uris, function(uri) {
-        timeout += 1000;
-        setTimeout(function() {
-          self.fetch(uri).then(
-            function(relPg) {
-              onPointedGraphRetrieved(relPg);
-            },
-            function(reason) {
-              if (reason.status) {
-                console.error("Request error with status code "+reason.status+" for URI:" +uri);
-              }
-              else {
-                console.error("Can't retrieve relationship at "+uri+" because of: "+JSON.stringify(reason));
-              }
-            });
-        },timeout);
-      });
-    }
 
     function validUrl(str) {
       var pattern = new RegExp('^(https?:\\/\\/)?'+ // protocol
@@ -168,7 +173,7 @@ angular.module('myApp.services', [])
 
 
 
-  .service('RdfHttpService',['$http','$q','RdfStore','CORS_PROXY_CFG','$angularCacheFactory',function($http,$q,RdfStore,CORS_PROXY_CFG,$angularCacheFactory) {
+  .service('RdfHttpService',['$http','$q','RdfParser','CORS_PROXY_CFG','$angularCacheFactory',function($http,$q,RdfParser,CORS_PROXY_CFG,$angularCacheFactory) {
 
     // TODO externalize this cache config
     // see documentation here: http://jmdobry.github.io/angular-cache/
@@ -201,40 +206,11 @@ angular.module('myApp.services', [])
         .then(function(response) {
           var mimeType = parseMimeType(response);
           console.debug("It seems we got a response with mimeType "+mimeType + " from "+ uri+" - will try to parse it as a graph");
-          return loadGraph(uri,response.data,mimeType);
+          return RdfParser.parseGraph(uri, response.data, mimeType);
         })
-        .then(function(triplesLoaded) {
-          console.debug("Number of triples loaded in store for " + uri + " = " + triplesLoaded);
-          return getGraph(uri,triplesLoaded);
-        });
     };
 
-    function loadGraph(graphUri,graphData,graphMimeType) {
-      var deferred = $q.defer();
-      RdfStore.load(graphMimeType,graphData,graphUri,function(success, results) {
-        if ( success ) {
-          deferred.resolve(results);
-        } else {
-          deferred.reject("Can't LOAD graph with GraphURI="+graphUri+" and graphMimeType="+graphMimeType+" -> "+results);
-        }
-      });
-      return deferred.promise;
-    }
 
-    function getGraph(graphUri,expectedTriplesNumber) {
-      var deferred = $q.defer();
-      RdfStore.graph(graphUri,function(success,graph){
-        if ( success ) {
-          if ( graph.toArray().length != expectedTriplesNumber) {
-            throw "Expected to find " + expectedTriplesNumber + " triples, but graph loaded has "+graph.toArray().length+" triples for uri "+graphUri+" ->\n" + graph.toNT();
-          }
-          deferred.resolve(graph);
-        } else {
-          deferred.reject("Can't GET graph with GraphURI="+graphUri);
-        }
-      });
-      return deferred.promise;
-    }
 
     // TODO this must be checked, but we need to be able to extract the mime type
     // sometimes the charset is provided; like "Content-Type:text/turtle; charset=utf-8"

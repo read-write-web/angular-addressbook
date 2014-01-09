@@ -30622,7 +30622,6 @@
 
 // Checks if this is a webworker
   if(!!Worker) {
-    console.error("Using webworkers");
     RDFStoreClient.RDFStoreClient = function(path_to_store_script, args, cb) {
       console.log("trying to load "+path_to_store_script);
       if(Worker.Worker) {

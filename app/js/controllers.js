@@ -5,7 +5,7 @@
 angular.module('myApp.controllers', [])
 
 
-  .controller('PersonProfileCtrl', ['$scope','$location','RdfStore','RdfPointedGraphService',function($scope,$location,RdfStore,RdfPointedGraphService) {
+  .controller('PersonProfileCtrl', ['$scope','$location','RdfPointedGraphService',function($scope,$location,RdfPointedGraphService) {
 
 
     // var defaultProfileUri = 'https://my-profile.eu/people/deiu/card#me';
@@ -42,11 +42,11 @@ angular.module('myApp.controllers', [])
       RdfPointedGraphService.fetch(subject).then(
         function(personPg) {
           $scope.personPg = personPg
-          RdfPointedGraphService.oneToManySequential(personPg,'foaf:knows',function onRelationshipFound(relationshipPg) {
+          RdfPointedGraphService.oneToMany(personPg,'foaf:knows',function onRelationshipFound(relationshipPg) {
             relationshipsPgArray.push(relationshipPg);
           });
         },function(reason) {
-          if (reason.status) {
+          if (reason.status || reason.status == 0) {
             console.error("Request error with status code "+reason.status+" for URI:" +subject);
           } else {
             console.error("Can't retrieve full profile at "+subject+" because of: "+JSON.stringify(reason));
