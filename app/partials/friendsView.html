@@ -1,3 +1,6 @@
+<div id="currentProfile">
+    Who are you (temp helper)? <input ng-model="currentProfileUri" size="100"/>
+</div>
 <div id="search">
     <div id="add">+</div>
     <input type="text" placeholder="Search your contacts" ng-model="searchContactText"/>
@@ -11,19 +14,19 @@
             <div class="cssLoader loader style-3"></div>
             <div class="picture">
                 <a href="" ng-click="changeCurrentProfileUri(relationshipPg.subject)">
-                    <img ng-src="{{ (relationshipPg | predicate:'foaf:img') || (relationshipPg | predicate:'foaf:depiction') }}" src="img/avatar.png" alt="Picture for {{relationshipPg.subject}}"/>
+                    <img ng-src="{{ relationshipPg | predicateIn:['foaf:img','foaf:depiction'] }}" src="img/avatar.png" alt="Picture"/>
                 </a>
             </div>
-            <div class="name">{{ (relationshipPg | predicate:'foaf:name') || (relationshipPg | predicate:'foaf:nick') || (relationshipPg | predicate:'foaf:givenName')  }}</div>
-            <div class="surname">{{relationshipPg | predicate:'foaf:nick'}}</div>
-            <div class="company">{{'TodoCompany'}}</div>
-            <div class="newMessages">{{relationshipPg.graph.toArray().length}}</div>
+            <div class="name">{{ relationshipPg | predicateIn:['foaf:name','foaf:nick','foaf:givenName'] }}</div>
+            <div class="surname">{{ relationshipPg | predicate:'foaf:nick' }}</div>
+            <div class="company">{{ 'TodoCompany' }}</div>
+            <div class="newMessages">{{ relationshipPg.graph.toArray().length }}</div>
             <div class="recentInteractions">10</div>
             <div class="updates">4</div>
             <div class="moreInfo">
                 <div class="lastInteraction">Last message from Edward: <span>three days ago</span></div>
                 <div class="message">Hey, how was the play? I hope you enjoyed it. Let's talk about it this week...</div>
-                <div class="nextStep"><a href="#">Write back</a></div>
+                <div class="nextStep"><a href="{{ relationshipPg.subject }}">Write back</a></div>
             </div>
         </li>
 

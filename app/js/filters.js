@@ -5,12 +5,21 @@
 angular.module('myApp.filters', [])
 
   .filter('predicate', ['RdfPointedGraphService',function(RdfPointedGraphService) {
-    return function predicateFilter(pointedGraph,predicateVal) {
+    return function predicateFilter(pointedGraph,predicate) {
       if ( pointedGraph ) {
-        return RdfPointedGraphService.findFirstObjectByPredicateArray(pointedGraph,[predicateVal]);
+        return RdfPointedGraphService.findFirstObjectByPredicate(pointedGraph,predicate);
       }
     };
   }])
+
+  .filter('predicateIn', ['RdfPointedGraphService',function(RdfPointedGraphService) {
+    return function predicateInFilter(pointedGraph,predicateArray) {
+      if ( pointedGraph ) {
+        return RdfPointedGraphService.findFirstObjectByPredicateArray(pointedGraph,predicateArray);
+      }
+    };
+  }])
+
 
   .filter('splitNewLines', function () {
     return function splitNewLines(text) {

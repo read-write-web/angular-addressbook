@@ -7,11 +7,7 @@ angular.module('myApp.controllers', [])
 
   .controller('PersonProfileCtrl', ['$scope','$location','RdfPointedGraphService',function($scope,$location,RdfPointedGraphService) {
 
-
-    // var defaultProfileUri = 'https://my-profile.eu/people/deiu/card#me';
     var defaultProfileUri = 'http://bblfish.net/people/henry/card#me';
-
-
 
     $location.hash($scope.currentProfileUri);
     if ( $location.hash() ) {

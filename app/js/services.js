@@ -18,7 +18,7 @@ angular.module('myApp.services', [])
       // TODO perhaps not the best way to enhance the rdfstore graph...
       // permits to add a more efficient method for searching through the graph
       rdfEnv.enhanceRdfStoreGraph = function enhanceRdfStoreGraph(graph) {
-        graph.matchArray = function matchArray(subjectArray,predicateArray,objectArray,limit) {
+        graph.matchAnyOf = function matchAnyOf(subjectArray,predicateArray,objectArray,limit) {
           return createGraphMatchingArrays(rdfEnv,graph,subjectArray,predicateArray,objectArray,limit);
         }
       }
@@ -36,11 +36,12 @@ angular.module('myApp.services', [])
         if( nodeMatchArray(triple.subject, subjectArray)
           && nodeMatchArray(triple.predicate, predicateArray)
           && nodeMatchArray(triple.object, objectArray)  ) {
-          if( limit==null || matched < limit ) {
-            matched++;
+          if ( limit != null ) {
             newGraph.add(triple);
-          } else {
-            return newGraph;
+            matched++;
+            if ( matched === limit ) {
+              return newGraph;
+            }
           }
         }
       }
@@ -110,8 +111,16 @@ angular.module('myApp.services', [])
       return graph;
     }
 
-    this.findObjectsByPredicate = function findObjectsByPredicate(graph,subject,predicate,limit) {
+    // returns a filtered graph which only contain the triples of the subject
+    this.subjectGraph = function subjectGraph(graph,subject) {
       var subjectNode = RdfEnv.createNamedNode(subject);
+      var newGraph = graph.match(subjectNode,null,null);
+      RdfEnv.enhanceRdfStoreGraph(newGraph);
+      return newGraph;
+    }
+
+    this.findObjectsByPredicate = function findObjectsByPredicate(graph,subject,predicate,limit) {
+      var subjectNode = (subject != null) ? RdfEnv.createNamedNode(subject) : null;
       var predicateNode = RdfEnv.createNamedNode(RdfEnv.resolve(predicate));
       var triples = graph.match(subjectNode,predicateNode, null,limit).toArray();
       var matches = _.map(triples, function(t){ return t.object.valueOf() });
@@ -119,11 +128,11 @@ angular.module('myApp.services', [])
     }
 
     this.findObjectsByPredicateArray = function findObjectsByPredicateArray(graph,subject,predicateArray,limit) {
-      var subjectNodeArray = [RdfEnv.createNamedNode(subject)];
+      var subjectNodeArray = (subject != null) ? [RdfEnv.createNamedNode(subject)] : null;
       var predicateNodeArray = _.map(predicateArray,function(predicate) {
         return RdfEnv.createNamedNode(RdfEnv.resolve(predicate));
       })
-      var triples = graph.matchArray(subjectNodeArray,predicateNodeArray, null,limit).toArray();
+      var triples = graph.matchAnyOf(subjectNodeArray,predicateNodeArray, null,limit).toArray();
       var matches = _.map(triples, function(t){ return t.object.valueOf() });
       return matches;
     }
@@ -138,9 +147,17 @@ angular.module('myApp.services', [])
     var self = this;
 
     this.pointedGraph = function pointedGraph(graph,subject) {
+
+      // When trying to get a predicate's object for a given subject,
+      // it is faster to use this filtered version of the original graph
+      // because this will produce less iteration...
+      // however it can be a problem if the graph is modified: the subjectGraph could be unsync
+      var subjectGraph = RdfGraphService.subjectGraph(graph,subject);
+
       return {
         graph: graph,
-        subject: subject
+        subject: subject,
+        subjectGraph: subjectGraph
       }
     }
 
@@ -150,20 +167,20 @@ angular.module('myApp.services', [])
     }
 
     this.findObjectsByPredicate = function findObjectsByPredicate(pointedGraph,predicate,limit) {
-      return RdfGraphService.findObjectsByPredicate(pointedGraph.graph,pointedGraph.subject,predicate,limit);
+      return RdfGraphService.findObjectsByPredicate(pointedGraph.subjectGraph,null,predicate,limit);
     }
 
     this.findObjectsByPredicateArray = function findObjectsByPredicateArray(pointedGraph,predicate,limit) {
-      return RdfGraphService.findObjectsByPredicateArray(pointedGraph.graph,pointedGraph.subject,predicate,limit);
+      return RdfGraphService.findObjectsByPredicateArray(pointedGraph.subjectGraph,null,predicate,limit);
     }
 
     this.findFirstObjectByPredicate = function findFirstObjectByPredicate(pointedGraph,predicate) {
-      var result = RdfGraphService.findObjectsByPredicate(pointedGraph.graph,pointedGraph.subject,predicate,1);
+      var result = RdfGraphService.findObjectsByPredicate(pointedGraph.subjectGraph,null,predicate,1);
       return _.first(result);
     }
 
     this.findFirstObjectByPredicateArray = function findFirstObjectByPredicateArray(pointedGraph,predicate) {
-      var result =  RdfGraphService.findObjectsByPredicateArray(pointedGraph.graph,pointedGraph.subject,predicate,1);
+      var result =  RdfGraphService.findObjectsByPredicateArray(pointedGraph.subjectGraph,null,predicate,1);
       return _.first(result);
     }
 
@@ -234,6 +251,8 @@ angular.module('myApp.services', [])
 
     // TODO externalize this cache config
     // see documentation here: http://jmdobry.github.io/angular-cache/
+
+    // TODO the cache should cache parsed RDF instead of raw requests
     var httpCache = $angularCacheFactory("httpCache", {
       maxAge: 120000,
       cacheFlushInterval: 60000,
@@ -245,13 +264,14 @@ angular.module('myApp.services', [])
     });
     console.error("httpCache : " + httpCache);
 
+
     var config =
     {
       headers:  {
         'Accept': 'text/turtle' // TODO, and take care, rdfstore doesn't support natively rdf+xml
       },
-      timeout: 10000
-      // cache: httpCache // TODO make caching work fine!
+      timeout: 10000,
+      cache: httpCache
     };
 
     var self = this;
