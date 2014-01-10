@@ -37,7 +37,7 @@ angular.module('myApp.directives', [])
 
         ngModelCtrl.$formatters.push(function formatter(pointedGraph) {
           if (pointedGraph) {
-            var object = RdfPointedGraphService.findFirstObject(pointedGraph,predicate);
+            var object = RdfPointedGraphService.findFirstObjectByPredicate(pointedGraph,predicate);
             return object;
           }
         });

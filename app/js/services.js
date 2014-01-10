@@ -13,17 +13,65 @@ angular.module('myApp.services', [])
 
   .provider('RdfEnv',function() {
     this.$get = function($http) {
-      return rdfstore.create().rdf;
+      var rdfEnv = rdfstore.create().rdf;
+
+      // TODO perhaps not the best way to enhance the rdfstore graph...
+      // permits to add a more efficient method for searching through the graph
+      rdfEnv.enhanceRdfStoreGraph = function enhanceRdfStoreGraph(graph) {
+        graph.matchArray = function matchArray(subjectArray,predicateArray,objectArray,limit) {
+          return createGraphMatchingArrays(rdfEnv,graph,subjectArray,predicateArray,objectArray,limit);
+        }
+      }
+
+      return rdfEnv;
     }
+
+    function createGraphMatchingArrays(env,graph,subjectArray, predicateArray, objectArray, limit) {
+      var triples = graph.toArray();
+      var newGraph = env.createGraph([]);
+      env.enhanceRdfStoreGraph(newGraph);
+      var matched = 0;
+      for ( var i=0; i < triples.length; i++ ) {
+        var triple = triples[i];
+        if( nodeMatchArray(triple.subject, subjectArray)
+          && nodeMatchArray(triple.predicate, predicateArray)
+          && nodeMatchArray(triple.object, objectArray)  ) {
+          if( limit==null || matched < limit ) {
+            matched++;
+            newGraph.add(triple);
+          } else {
+            return newGraph;
+          }
+        }
+      }
+      return newGraph;
+    };
+
+
+    function nodeMatchArray(rdfNode,rdfNodeArray) {
+      if ( rdfNodeArray == null || rdfNodeArray.length == 0 ) {
+        return true;
+      }
+      return inArray(rdfNodeArray,rdfNode);
+    }
+
+    function inArray(rdfNodeArray,rdfNode) {
+      var findResult = _.find(rdfNodeArray,function(rdfNodeInArray) {
+        // see RDFJSInterface.RDFNode.prototype.equals
+        return rdfNode.equals(rdfNodeInArray);
+      });
+      return findResult != null;
+    }
+
   })
 
 
 
 
-  .service('RdfParser',['$q',function($q) {
+  .service('RdfParser',['$q','RdfEnv',function($q,RdfEnv) {
+
     // TODO see https://github.com/antoniogarrote/rdfstore-js/issues/70
     // it seems we need to create a different rdfstore instance each time to avoid a concurrency issue :(
-
     this.parseGraph = function parseGraph(graphUri, graphData, graphMimeType) {
       var deferred = $q.defer();
       var temporaryRdfStore = rdfstore.create();
@@ -31,6 +79,7 @@ angular.module('myApp.services', [])
         if ( success ) {
           temporaryRdfStore.graph(function(success,graph){
             if ( success ) {
+              RdfEnv.enhanceRdfStoreGraph(graph);
               deferred.resolve(graph);
             } else {
               deferred.reject("Can't GET graph with GraphURI="+graphUri);
@@ -42,6 +91,8 @@ angular.module('myApp.services', [])
       });
       return deferred.promise;
     }
+
+
   }])
 
 
@@ -59,27 +110,22 @@ angular.module('myApp.services', [])
       return graph;
     }
 
-    this.findAllObjects = function findAllObjects(graph,subject,predicate) {
+    this.findObjectsByPredicate = function findObjectsByPredicate(graph,subject,predicate,limit) {
       var subjectNode = RdfEnv.createNamedNode(subject);
       var predicateNode = RdfEnv.createNamedNode(RdfEnv.resolve(predicate));
-      var triples = graph.match(subjectNode,predicateNode, null).toArray();
+      var triples = graph.match(subjectNode,predicateNode, null,limit).toArray();
       var matches = _.map(triples, function(t){ return t.object.valueOf() });
-      if ( matches.length == 0 ) {
-        // console.warn("No object found for subject ["+subject+"] and predicate ["+predicate+"] in graph");
-      }
       return matches;
     }
 
-    this.findFirstObject = function findFirstObject(graph,subject,predicate) {
-      return getFirstOrUndefined(self.findAllObjects(graph,subject,predicate));
-    }
-
-    function getFirstOrUndefined(array) {
-      if ( array.length > 0 ) {
-        return array[0];
-      } else {
-        return undefined;
-      }
+    this.findObjectsByPredicateArray = function findObjectsByPredicateArray(graph,subject,predicateArray,limit) {
+      var subjectNodeArray = [RdfEnv.createNamedNode(subject)];
+      var predicateNodeArray = _.map(predicateArray,function(predicate) {
+        return RdfEnv.createNamedNode(RdfEnv.resolve(predicate));
+      })
+      var triples = graph.matchArray(subjectNodeArray,predicateNodeArray, null,limit).toArray();
+      var matches = _.map(triples, function(t){ return t.object.valueOf() });
+      return matches;
     }
 
   }])
@@ -103,20 +149,31 @@ angular.module('myApp.services', [])
       return self.pointedGraph( newGraph, pointedGraph.subject );
     }
 
-    this.findAllObjects = function findAllObjects(pointedGraph,predicate) {
-      return RdfGraphService.findAllObjects(pointedGraph.graph,pointedGraph.subject,predicate);
+    this.findObjectsByPredicate = function findObjectsByPredicate(pointedGraph,predicate,limit) {
+      return RdfGraphService.findObjectsByPredicate(pointedGraph.graph,pointedGraph.subject,predicate,limit);
     }
 
-    this.findFirstObject = function findFirstObject(pointedGraph,predicate) {
-      return RdfGraphService.findFirstObject(pointedGraph.graph,pointedGraph.subject,predicate);
+    this.findObjectsByPredicateArray = function findObjectsByPredicateArray(pointedGraph,predicate,limit) {
+      return RdfGraphService.findObjectsByPredicateArray(pointedGraph.graph,pointedGraph.subject,predicate,limit);
     }
+
+    this.findFirstObjectByPredicate = function findFirstObjectByPredicate(pointedGraph,predicate) {
+      var result = RdfGraphService.findObjectsByPredicate(pointedGraph.graph,pointedGraph.subject,predicate,1);
+      return _.first(result);
+    }
+
+    this.findFirstObjectByPredicateArray = function findFirstObjectByPredicateArray(pointedGraph,predicate) {
+      var result =  RdfGraphService.findObjectsByPredicateArray(pointedGraph.graph,pointedGraph.subject,predicate,1);
+      return _.first(result);
+    }
+
 
 
     // permits to retrieve the pointed graphs for a given predicate of a given pointed graph
     // ex: oneToManyFetch(personPg,'foaf:knows',callback); will call the callback with all the friends pointed graphs of the personPg
     // TODO return a stream instead of calling a callback (use RxJS?)
     this.oneToMany = function oneToMany(pointedGraph,predicate,onPointedGraphRetrieved) {
-      var objects = self.findAllObjects(pointedGraph,predicate);
+      var objects = self.findObjectsByPredicate(pointedGraph,predicate);
       // TODO handle that not all rels are uris, it can be blank nodes etc...
       var uris = objects.filter(validUrl)
       console.debug("Subject: "+pointedGraph.subject+" -> Relations for "+predicate+" uris are: " + JSON.stringify(uris));

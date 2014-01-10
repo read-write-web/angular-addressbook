@@ -7,7 +7,7 @@ angular.module('myApp.filters', [])
   .filter('predicate', ['RdfPointedGraphService',function(RdfPointedGraphService) {
     return function predicateFilter(pointedGraph,predicateVal) {
       if ( pointedGraph ) {
-        return RdfPointedGraphService.findFirstObject(pointedGraph,predicateVal);
+        return RdfPointedGraphService.findFirstObjectByPredicateArray(pointedGraph,[predicateVal]);
       }
     };
   }])

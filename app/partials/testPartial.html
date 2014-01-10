@@ -16,8 +16,8 @@
             </div>
             <div class="name">{{ (relationshipPg | predicate:'foaf:name') || (relationshipPg | predicate:'foaf:nick') || (relationshipPg | predicate:'foaf:givenName')  }}</div>
             <div class="surname">{{relationshipPg | predicate:'foaf:nick'}}</div>
-            <div class="company">{{(relationshipPg | predicate:'foaf:workplaceHomepage') || 'NoCompany'}}</div>
-            <div class="newMessages">3</div>
+            <div class="company">{{'TodoCompany'}}</div>
+            <div class="newMessages">{{relationshipPg.graph.toArray().length}}</div>
             <div class="recentInteractions">10</div>
             <div class="updates">4</div>
             <div class="moreInfo">
