@@ -8,7 +8,7 @@ angular.module('myApp.configuration', [])
       enabled: true,
       corsProxifyUrl: function corsProxifyUrl(uri) {
         // return 'http://data.fm/proxy?uri='+encodeURIComponent(uri);
-        return 'https://localhost:8443/srv/cors?url='+encodeURIComponent(uri);
+        return 'http://localhost:9000/srv/cors?url='+encodeURIComponent(uri);
       }
     }
   });
