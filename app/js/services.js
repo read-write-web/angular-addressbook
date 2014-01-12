@@ -36,8 +36,8 @@ angular.module('myApp.services', [])
         if( nodeMatchArray(triple.subject, subjectArray)
           && nodeMatchArray(triple.predicate, predicateArray)
           && nodeMatchArray(triple.object, objectArray)  ) {
+          newGraph.add(triple);
           if ( limit != null ) {
-            newGraph.add(triple);
             matched++;
             if ( matched === limit ) {
               return newGraph;
@@ -70,6 +70,8 @@ angular.module('myApp.services', [])
 
 
   .service('RdfParser',['$q','RdfEnv',function($q,RdfEnv) {
+
+
 
     // TODO see https://github.com/antoniogarrote/rdfstore-js/issues/70
     // it seems we need to create a different rdfstore instance each time to avoid a concurrency issue :(
@@ -132,9 +134,23 @@ angular.module('myApp.services', [])
       var predicateNodeArray = _.map(predicateArray,function(predicate) {
         return RdfEnv.createNamedNode(RdfEnv.resolve(predicate));
       })
-      var triples = graph.matchAnyOf(subjectNodeArray,predicateNodeArray, null,limit).toArray();
-      var matches = _.map(triples, function(t){ return t.object.valueOf() });
+      var matchGraph = graph.matchAnyOf(subjectNodeArray,predicateNodeArray, null,limit);
+      var triples = matchGraph.toArray();
+      var sortedTriples = sortTriplesByPredicateArrayOrder(triples,predicateNodeArray);
+      var matches = _.map(sortedTriples, function(t){ return t.object.valueOf() });
       return matches;
+    }
+
+    // If we ask for [foaf:name, foaf:nick, foaf:something], this permits to order the triples by this predicate order
+    // the triples with foaf:name will be returned first in the list
+    function sortTriplesByPredicateArrayOrder(triples,predicateArray) {
+      return _.sortBy(triples,function(t) {
+        var predicateInArrayFound = _.find(predicateArray,function(predicateInArray) {
+          // see RDFJSInterface.RDFNode.prototype.equals
+          return t.predicate.equals(predicateInArray);
+        });
+        return predicateArray.indexOf(predicateInArrayFound);
+      });
     }
 
   }])
@@ -161,26 +177,28 @@ angular.module('myApp.services', [])
       }
     }
 
-    this.createOrReplaceObject = function createOrReplaceObject(pointedGraph,predicate,newObjectValue) {
-      var newGraph = RdfGraphService.createOrReplaceObject(pointedGraph.graph,pointedGraph.subject,predicate,newObjectValue);
+    this.createOrReplaceObject = function createOrReplaceObject(pointedGraph, predicate, newObjectValue) {
+      var newGraph = RdfGraphService.createOrReplaceObject( pointedGraph.graph, pointedGraph.subject, predicate, newObjectValue);
       return self.pointedGraph( newGraph, pointedGraph.subject );
     }
 
-    this.findObjectsByPredicate = function findObjectsByPredicate(pointedGraph,predicate,limit) {
-      return RdfGraphService.findObjectsByPredicate(pointedGraph.subjectGraph,null,predicate,limit);
+    this.findObjectsByPredicate = function findObjectsByPredicate(pointedGraph, predicate, limit) {
+      return RdfGraphService.findObjectsByPredicate( pointedGraph.subjectGraph, pointedGraph.subject, predicate,limit);
     }
 
-    this.findObjectsByPredicateArray = function findObjectsByPredicateArray(pointedGraph,predicate,limit) {
-      return RdfGraphService.findObjectsByPredicateArray(pointedGraph.subjectGraph,null,predicate,limit);
+    this.findObjectsByPredicateArray = function findObjectsByPredicateArray(pointedGraph, predicate, limit) {
+      return RdfGraphService.findObjectsByPredicateArray( pointedGraph.subjectGraph, pointedGraph.subject, predicate,limit);
     }
 
-    this.findFirstObjectByPredicate = function findFirstObjectByPredicate(pointedGraph,predicate) {
-      var result = RdfGraphService.findObjectsByPredicate(pointedGraph.subjectGraph,null,predicate,1);
+    this.findFirstObjectByPredicate = function findFirstObjectByPredicate(pointedGraph, predicate) {
+      var limit = 1;
+      var result = RdfGraphService.findObjectsByPredicate( pointedGraph.subjectGraph, pointedGraph.subject, predicate,limit);
       return _.first(result);
     }
 
-    this.findFirstObjectByPredicateArray = function findFirstObjectByPredicateArray(pointedGraph,predicate) {
-      var result =  RdfGraphService.findObjectsByPredicateArray(pointedGraph.subjectGraph,null,predicate,1);
+    this.findFirstObjectByPredicateArray = function findFirstObjectByPredicateArray(pointedGraph, predicate) {
+      var limit = undefined; // done on purpose because we want the results to be sorted
+      var result =  RdfGraphService.findObjectsByPredicateArray( pointedGraph.subjectGraph, pointedGraph.subject, predicate,limit);
       return _.first(result);
     }
 
