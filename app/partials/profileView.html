@@ -1,0 +1,107 @@
+
+<div id="profile" class="clearfix center">
+
+    <div class="picture float-right">
+        <a href="" ng-click="changeCurrentProfileUri(personPg.subject)">
+            <img ng-src="{{ personPg | predicateIn:['foaf:img','foaf:depiction'] }}" src="img/avatar.png" alt="Picture"/>
+        </a>
+    </div>
+
+    <div class="basic">
+        <div class="name title-case">{{ personPg | predicateIn:['foaf:name','foaf:nick','foaf:givenName'] }}</div>
+        <div class="surname title-case">{{ personPg | predicate:'foaf:nick' }}</div>
+        <div class="company">{{ 'TodoCompany' }}</div>
+    </div>
+
+    <div class="notifications">
+        <div class="newMessages float-left">{{ personPg.graph.toArray().length }}</div>
+        <div class="recentInteractions float-left">10</div>
+        <div class="updates float-left">4</div>
+    </div>
+
+    <div class="moreInfo">
+        <div class="lastInteraction">Last message from Edward: <span>three days ago</span></div>
+        <div class="message">Hey, how was the play? I hope you enjoyed it.
+            Let's talk about it this week at the office. Did you send the documents to John?
+            Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.
+            Morbi leo risus, porta ac consectetur ac, vestibulum at eros. Nullam quis risus eget
+            urna mollis ornare vel eu leo.
+        </div>
+        <div class="nextStep"><a href="#">Write back</a></div>
+    </div>
+
+    <div id="details">
+        <div class="title center-text title-case">DETAILS</div>
+
+        <ul class="clearfix span3">
+            <li class="float-left">
+                <div class="email">
+                    <div class="title-case">Email</div>
+                    <div class="content email-content">edward@stample.co</div>
+                </div>
+                <div class="phone">
+                    <div class="title-case">Phone</div>
+                    <div class="content email-content">+ 33 6 79 42 51 39</div>
+                </div>
+            </li>
+            <li class="float-left">
+                <div class="address">
+                    <div class="title-case">Address ========= {{ personPg | predicate:'contact:home' }}</div>
+                    <div class="content address-content">
+                        5, rue Seveste<br>
+                        75018 Paris<br>
+                        France
+                    </div>
+                </div>
+            </li>
+            <li class="float-left">
+                <div class="website">
+                    <div class="title-case">Website</div>
+                    <div class="content website-content">
+                        <a href="https://stample.co" target="_blank">https://stample.co</a>
+                    </div>
+                </div>
+            </li>
+
+        </ul>
+    </div>
+
+    <div id="webid" class="clearfix">
+        <a href="https://edwardsilhol.com/me#card"><img src="img/webid.png" alt="Web ID logo" class="float-left"/></a>
+        <div id="webid-address" class="float-left"><span class="title-case">Web ID</span> {{ personPg.subject }}</div>
+    </div>
+
+    <div id="contacts">
+        <div class="title center-text title-case">Edward's contacts</div>
+
+        <ul class="clearfix span3">
+            <li class="contact clearfix float-left" ng-repeat="relationshipPg in relationshipPgs | filter:searchContactText">
+                <div class="loader"></div>
+                <div class="picture float-right">
+                    <a href="" ng-click="changeCurrentProfileUri(relationshipPg.subject)">
+                        <img ng-src="{{ relationshipPg | predicateIn:['foaf:img','foaf:depiction'] }}" src="img/avatar.png" alt="Picture"/>
+                    </a>
+                </div>
+
+                <div class="basic">
+                    <div class="name title-case">{{ relationshipPg | predicateIn:['foaf:name','foaf:nick','foaf:givenName'] }}</div>
+                    <div class="surname title-case">{{ relationshipPg | predicate:'foaf:nick' }}</div>
+                    <div class="company">{{ 'TodoCompany' }}</div>
+                </div>
+
+                <div class="notifications">
+                    <div class="newMessages float-left">{{ relationshipPg.graph.toArray().length }}</div>
+                    <div class="recentInteractions float-left">10</div>
+                    <div class="updates float-left">4</div>
+                </div>
+
+                <div class="moreInfo">
+                    <div class="lastInteraction"><span>You have not exchanged messages yet.</span></div>
+                    <div class="nextStep"><a href="{{ relationshipPg.subject }}">Write back</a></div>
+                </div>
+            </li>
+        </ul>
+
+    </div>
+
+</div>

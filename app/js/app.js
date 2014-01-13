@@ -16,6 +16,7 @@ angular.module('myApp', [
   .config(['$routeProvider', function($routeProvider) {
     $routeProvider.when('/personProfile', {templateUrl: 'partials/personProfile.html', controller: 'PersonProfileCtrl'});
     $routeProvider.when('/friendsView', {templateUrl: 'partials/friendsView.html', controller: 'PersonProfileCtrl'});
-    $routeProvider.otherwise({redirectTo: '/friendsView'});
+    $routeProvider.when('/profileView', {templateUrl: 'partials/profileView.html', controller: 'PersonProfileCtrl'});
+    $routeProvider.otherwise({redirectTo: '/profileView'});
   }])
 ;
